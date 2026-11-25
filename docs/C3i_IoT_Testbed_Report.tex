@@ -1,0 +1,563 @@
+\documentclass[11pt]{article}
+
+% ---------------------------------------------------------------------------
+% C3i Hub IoT Security Testbed — technical report (LaTeX source)
+% Compile: pdflatex C3i_IoT_Testbed_Report.tex  (run twice for the ToC)
+% ---------------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,margin=0.95in]{geometry}
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+% ---- brand palette --------------------------------------------------------
+\definecolor{accent}{HTML}{149C77}   % mint-teal, darkened for print contrast
+\definecolor{accentbg}{HTML}{E7F6F0}
+\definecolor{ink}{HTML}{11181E}
+\definecolor{slate}{HTML}{3F4B57}
+\definecolor{rulegray}{HTML}{D4DBE1}
+\definecolor{warnbar}{HTML}{C07A1A}
+\definecolor{warnbg}{HTML}{FBF2E2}
+\definecolor{codebg}{HTML}{F2F5F7}
+
+\hypersetup{colorlinks=true, linkcolor=accent, urlcolor=accent, citecolor=accent}
+
+% ---- headings -------------------------------------------------------------
+\titleformat{\section}{\Large\bfseries\color{ink}}{\thesection\quad}{0pt}{}[{\color{accent}\titlerule[1.2pt]}]
+\titleformat{\subsection}{\large\bfseries\color{ink}}{\thesubsection\quad}{0pt}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titlespacing*{\subsection}{0pt}{11pt}{4pt}
+
+% ---- header / footer ------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\fancyfoot[L]{\footnotesize\color{slate}C3i Hub · IoT Security Testbed}
+\fancyfoot[R]{\footnotesize\color{slate}\thepage}
+
+% ---- helpers --------------------------------------------------------------
+% Inline code: boxed in prose, plain in tables (set \intable=1 there) to avoid
+% non-breaking colorbox cells overflowing narrow columns.
+\newif\ifintable\intablefalse
+\newcommand{\code}[1]{\ifintable\texttt{#1}\else{\small\colorbox{codebg}{\texttt{#1}}}\fi}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\newtcolorbox{callout}[1][]{colback=accentbg,colframe=accent,boxrule=0pt,
+  leftrule=3pt,arc=1pt,left=8pt,right=8pt,top=6pt,bottom=6pt,#1}
+\newtcolorbox{warnbox}[1][]{colback=warnbg,colframe=warnbar,boxrule=0pt,
+  leftrule=3pt,arc=1pt,left=8pt,right=8pt,top=6pt,bottom=6pt,#1}
+% Full-width wrapping code display (breaks at spaces; no overflow).
+\newtcolorbox{codebox}{colback=codebg,boxrule=0pt,arc=1pt,
+  left=10pt,right=10pt,top=6pt,bottom=6pt,before skip=7pt,after skip=7pt}
+
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.5em,itemsep=2pt,topsep=3pt}
+\renewcommand{\arraystretch}{1.3}
+
+% ===========================================================================
+\begin{document}
+\sloppy
+
+% ---- cover ----------------------------------------------------------------
+\begin{titlepage}
+\thispagestyle{empty}
+\vspace*{3cm}
+\noindent{\color{accent}\rule{3cm}{3pt}}\\[1.2cm]
+{\Huge\bfseries\color{ink} C3i Hub IoT Security Testbed}\\[0.5cm]
+{\LARGE\color{slate} What the platform does, how to run it,\\ and how to verify its results}\\[1.5cm]
+\noindent{\large A unified Bluetooth/BLE, Wi-Fi/IP, hardware (UART/SPI/I2C) and
+firmware auditing platform developed under the \emph{Development of Testbeds and
+Security Mechanisms for Smart IoT Devices} initiative.}\\[2cm]
+\noindent\begin{tabular}{@{}ll@{}}
+{\bfseries Version} & Platform v2.0.0\\
+{\bfseries Domains} & Bluetooth/BLE, Wi-Fi/IP, Hardware, Firmware\\
+{\bfseries Scope} & Authorized, evidence-backed IoT security assessment\\
+{\bfseries Source} & \texttt{docs/C3i\_IoT\_Testbed\_Report.tex} (this document)\\
+\end{tabular}
+\vfill
+\noindent{\color{accent}\rule{\textwidth}{0.6pt}}\\[2pt]
+{\footnotesize\color{slate} C3i Hub · IIT Kanpur \hfill Technical report}
+\end{titlepage}
+
+% ---- contents -------------------------------------------------------------
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{Executive summary — is this tool trustworthy?}
+The C3i IoT Security Testbed is a single workspace that assesses a connected
+device across four layers: \textbf{Bluetooth/BLE}, \textbf{Wi-Fi/IP}, a
+\textbf{hardware testbed} (UART, SPI, I2C, logic analysis and bounded fault
+injection) and \textbf{firmware static analysis}. It is built around three
+principles that make its output defensible in a client report:
+
+\begin{itemize}
+  \item \textbf{Honesty over theatre.} Every module probes for the capabilities
+  it needs and reports \emph{unavailable} rather than fabricating a result. A
+  distance is a \emph{model estimate}, a CVE is a \emph{candidate}, and a hash
+  identifies the bytes saved locally --- never a claim the tool cannot support.
+  \item \textbf{Authorization first.} Non-passive actions are gated behind a
+  cryptographically signed Rules of Engagement (RoE) \emph{and} a host-level
+  invasive switch. Scope is enforced per target.
+  \item \textbf{Evidence at every step.} Each run records logs, artefacts
+  (hashed), and structured findings that roll up into an engagement report.
+\end{itemize}
+
+\begin{callout}
+\textbf{Why ``is it sus?'' is the right question.} The platform is designed so
+that a sceptical reviewer can trace every finding to its basis: the module, the
+command issued, the raw evidence, and the confidence. Nothing is asserted that
+the collected evidence does not support.
+\end{callout}
+
+% ===========================================================================
+\section{Platform at a glance}
+The workflow is linear and auditable:
+\begin{center}
+\begin{codebox}\small\ttfamily (1) Engagements $\rightarrow$ (2) Firmware / Hardware / Module runner $\rightarrow$ (3) Findings $\rightarrow$ (4) Evidence \& reports\end{codebox}
+\end{center}
+
+A FastAPI backend hosts a plugin registry (36 modules across four domains); a
+React/TypeScript console drives it. Each module declares its parameters,
+safety level, required capabilities and tags, so the UI and the authorization
+gate are generated from the same source of truth.
+
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{3.1cm} L{4.2cm} X@{}}
+\toprule
+\textbf{Domain} & \textbf{Input} & \textbf{What it produces}\\
+\midrule
+Bluetooth/BLE & A device in radio range & Discovery, OS/version inference, firmware ID, GATT map, pairing/privacy posture, coarse distance, CVEs\\
+Wi-Fi/IP & An owned host or AP & Service/version scan, TLS posture, wireless survey, MQTT audit, bounded deauth\\
+Hardware & A board / debug interface & UART console + boot log, SPI/I2C identity \& dump, logic decode, complete filesystem acquisition, bounded glitch\\
+Firmware & An image or recovered partition & Carving, entropy, secrets, SBOM, secure-boot audit, CVE mapping\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The domains map to the layers of a device (radio, network, firmware, memory,
+physical interface) so a client report can show coverage per layer.
+
+\subsection{Architecture \& plugin model}
+Each domain is a \emph{plugin}; each capability is a \emph{module} declared with
+a decorator carrying its name, title, safety level, Pydantic parameter model,
+required capabilities and tags. The registry exposes this metadata over the API,
+so three things are generated from one declaration: the console's input form, the
+authorization requirements, and the capability pre-flight. A \emph{capability}
+(e.g.\ \code{net.tshark}, \code{bt.dbus}, \code{host.block\_tools}) is probed at
+runtime; when absent, the module says so and offers the exact install command,
+instead of failing opaquely or faking a result. Jobs run through a serialized
+runner per hardware/radio domain (so two jobs never fight over one adapter,
+serial port or bus), emitting live progress, logs, structured findings and
+hashed evidence --- all persisted and attributable to the engagement.
+
+\subsection{Intrusiveness ladder}
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{2.4cm} X@{}}
+\toprule
+\textbf{Level} & \textbf{Meaning \& examples}\\
+\midrule
+Passive & Observation only; always allowed. Discovery, GATT read, port scan, entropy.\\
+Active & Touches the target but non-destructive. Baud detect, filesystem dump, default-credential test.\\
+Invasive & State-changing / stress; bounded and reversible; double-gated. Voltage glitch, deauth, link stress, MAC spoof.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ===========================================================================
+\section{The safety model: why every finding is defensible}
+Authorization is enforced in \code{assert\_authorized} before any non-passive
+module runs. The gate checks, in order:
+\begin{enumerate}
+  \item \textbf{Host switch} --- invasive/active modules require
+  \code{C3I\_ENABLE\_INVASIVE=true} on the host.
+  \item \textbf{Engagement status} --- must be \emph{authorized} or \emph{active}.
+  \item \textbf{Signed RoE} --- an HMAC-SHA256 signature over the engagement id,
+  signer, scope and expiry. Changing the scope invalidates the signature
+  (\emph{tamper-evident}).
+  \item \textbf{Expiry} --- an expired RoE blocks execution.
+  \item \textbf{Scope} --- the target (MAC, IP, CIDR, device path, or the
+  pseudo-target \code{local}) must be in the authorized set.
+\end{enumerate}
+
+Modules are classified \textbf{passive} (observation only; always allowed),
+\textbf{active} (touches the target but non-destructive) or \textbf{invasive}
+(state-changing / stress; always reversible and bounded). The console surfaces
+the level on every module and requires a pre-flight checklist for invasive runs.
+
+% ===========================================================================
+\section{Bluetooth / BLE}
+The Bluetooth domain profiles a device, identifies its OS/firmware, enumerates
+the full GATT attribute table and classifies access, assesses pairing/privacy
+posture, verifies encryption, maps CVEs, and gives a coarse distance with honest
+uncertainty. It drives a real BlueZ stack and degrades honestly when a
+dependency or adapter is absent.
+
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{3.3cm} L{1.9cm} X@{}}
+\toprule
+\textbf{Module} & \textbf{Safety} & \textbf{What it does}\\
+\midrule
+\code{scan} & passive & Discovers classic + LE devices, ranks by RSSI, flags strong unnamed devices, adds vendor/OS hints\\
+\code{profile} & passive & SDP/class + manufacturer-data evidence to infer OS family/version with a confidence score; flags pairing hygiene\\
+\code{gatt\_firmware} & passive & Reads the Device Information Service (DIS) over D-Bus (gatttool fallback) and maps firmware to CVEs\\
+\code{gatt\_enum} & passive & Walks the \emph{entire} GATT table; classifies each characteristic OPEN vs PROTECTED; bounded reads\\
+\code{le\_security} & passive & Address privacy (public vs random), pairing/bonding state, services-without-pairing\\
+\code{link\_rtt} & passive & L2CAP echo RTT + packet delivery; coarse RSSI distance estimate\\
+\code{capture\_audit} & passive & Encrypted-vs-plaintext verdict from a capture + version hints + CVEs\\
+\code{cve\_lookup} & passive & Maps OS/firmware keywords to CVEs\\
+\code{link\_stress} & invasive & Bounded L2CAP echo load ($\le$1000 pkts); measures degradation, always stops\\
+\code{mac\_spoof} & invasive & Changes the local adapter identity then restores it\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Telling how far away a device is}
+\code{link\_rtt} reports an \emph{Estimated distance} from the device's current
+RSSI using a log-distance path-loss model:
+\begin{codebox}\small\ttfamily d = 10\textasciicircum{}((RSSI\_at\_1m $-$ RSSI) / (10 $\times$ n))\end{codebox}
+\begin{itemize}
+  \item \textbf{RSSI\_at\_1m} defaults to $-59$\,dBm --- a typical BLE 1\,m value,
+  deliberately \emph{not} the advertised TxPower.
+  \item \textbf{n} (path-loss exponent) defaults to 2.5 indoor (2.0 free space,
+  $\sim$3.0 obstructed); the operator can override it.
+  \item The card shows a point estimate, a plausible range (varying $n$ by
+  $\pm0.5$), the RSSI, the reference and a low/medium confidence --- never
+  ``high'' from a single sample. RTT is reported separately for link quality
+  only; it is \emph{not} converted to distance.
+\end{itemize}
+\begin{warnbox}
+\textbf{Why it is deliberately fuzzy.} Body shadowing, antenna orientation and
+multipath routinely cause 2--3$\times$ error on one RSSI sample. For a tighter
+answer, measure RSSI at 1\,m in the same environment and pass it as a reference.
+For true ranging use UWB / time-of-flight --- Bluetooth RSSI is not a tape measure.
+\end{warnbox}
+
+\subsection{Deep GATT enumeration \& pairing/privacy (the core BLE pentest)}
+Reading only the DIS is a fingerprint, not an assessment. \code{gatt\_enum}
+walks every service, characteristic and descriptor over the BlueZ D-Bus API and
+classifies each characteristic's access from its \texttt{Flags}:
+\begin{itemize}
+  \item \textbf{OPEN} --- reachable with \emph{no} encryption/authentication
+  (plain \texttt{read} / \texttt{write} / \texttt{write-without-response}). An OPEN
+  \emph{writable} characteristic on an actuator, lock, config or OTA service is a
+  classic high-severity finding and is reported as such.
+  \item \textbf{PROTECTED} --- requires a bonded/encrypted link
+  (\texttt{encrypt-*} / \texttt{secure-*} / \texttt{authenticated-signed-writes}).
+  \item OPEN-readable values are read (bounded) and saved as evidence so you can
+  check for secrets or PII exposed without pairing.
+\end{itemize}
+\code{le\_security} reports the observable posture: a \emph{fixed public address}
+(trackable --- flagged) vs a rotating random/resolvable one; paired/bonded/trusted
+state; and services exposed \emph{without pairing}. It never invents an SMP method
+it did not witness.
+\begin{callout}
+\textbf{Grounded in real BLE methodology} --- service/characteristic discovery
+then OPEN-vs-PROTECTED review, and the spec-level weaknesses behind KNOB (minimum
+key length), BIAS (impersonation) and Just-Works/legacy pairing (no MITM
+protection; sniffable keys before LE Secure Connections). Enumeration is not an
+auth bypass --- it only records what the device exposes unauthenticated.
+\end{callout}
+
+\subsection{What more can be done}
+Active SMP probing (detect Just-Works/downgrade, behind the invasive gate);
+passive advertisement sniffing with an nRF/Ubertooth; authorized
+characteristic write-testing; explicit SweynTooth/BleedingTooth/KNOB/BIAS
+mapping; and OTA/DFU service detection.
+
+% ===========================================================================
+\section{Wi-Fi / IP}
+This domain assesses the network, session and OS layers of an \textbf{owned}
+target or access point --- honest service and posture assessment, not cracking a
+third party's network.
+
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{3.2cm} L{1.8cm} X@{}}
+\toprule
+\textbf{Module} & \textbf{Safety} & \textbf{What it does}\\
+\midrule
+\code{discovery} & passive & nmap host sweep to inventory the device mesh\\
+\code{portscan} & passive & Service/version scan; flags dangerous services; version$\rightarrow$CVE\\
+\code{os\_fingerprint} & passive & TTL heuristic + optional nmap -O\\
+\code{tls\_audit} & passive & Enumerates TLS versions/ciphers; flags downgrade + self-signed\\
+\code{wireless\_survey} & passive & Nearby APs, encryption, WPS exposure (iw)\\
+\code{mqtt\_audit} & passive & Detects anonymous-subscribe brokers, samples topics\\
+\code{traffic\_capture} & passive & Captures N seconds, verifies encryption, mines version hints + CVEs\\
+\code{default\_credentials} & active & Bounded default-credential test on an HTTP UI\\
+\code{deauth\_test} & invasive & $\le$20 deauth frames; detects missing 802.11w; restores the interface\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A no-RF Wi-Fi lab (\code{mac80211\_hwsim} + hostapd) lets the radio-layer modules
+run deterministically on one Linux host with no transmitter (see \S\ref{sec:testing}).
+
+% ===========================================================================
+\section{Hardware testbed --- UART / SPI / I2C and complete filesystem extraction}
+This is the Raspberry-Pi rig domain, derived from the C3i Hub IOTSMS-2023
+testbed. For a camera or similar device the goal is to get from a bare board to a
+\textbf{complete, analysable filesystem} while staying read-only first and
+preserving evidence.
+
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{3.4cm} L{1.6cm} X@{}}
+\toprule
+\textbf{Module} & \textbf{Safety} & \textbf{What it does}\\
+\midrule
+\code{hardware\_info} & passive & Rig diagnostics: GPIO backend, serial, probes, storage\\
+\code{detect\_baud} & active & Auto-discovers UART baud by scoring boot output\\
+\code{capture\_bootlog} & active & Power-cycles, captures + analyses the boot log, maps CVEs\\
+\code{uart\_console} & active & Detects console/login/bootloader; optional safe U-Boot breakout\\
+\code{serial\_exec} & active & Runs one bounded command on an existing shell\\
+\code{filesystem\_dump} & active & Recovers one \texttt{/proc/mtd} partition --- or \emph{all} (\texttt{all\_partitions})\\
+\code{rootfs\_archive} & active & Tars the \emph{live} mounted filesystem over UART or netcat\\
+\code{host\_block\_acquire} & active & Read-only image of a USB/SD device attached to the host\\
+\code{adb\_acquire} & active & Tars a filesystem off an Android device via adb exec-out\\
+\code{spi\_identify} & active & Read-only JEDEC identity + write-protection state\\
+\code{spi\_dump} & invasive & Reads the flash via flashrom; hands off to firmware\\
+\code{i2c\_scan} & active & Scans an I2C bus / reads an EEPROM candidate\\
+\code{logic\_capture} & active & Passive logic-analyzer capture + UART/SPI/I2C decode\\
+\code{power\_control} & active & Manual relay / optocoupler on/off/cycle\\
+\code{voltage\_glitch} & invasive & Bounded glitch pulse train; always restores power\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Complete-acquisition method matrix}
+``Extract the whole filesystem'' has several correct answers depending on how the
+device is wired and whether it is running. Each method writes a SHA-256-identified
+image to evidence and hands off to the firmware domain.
+
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{4.3cm} L{3.6cm} X@{}}
+\toprule
+\textbf{Situation} & \textbf{Module} & \textbf{Why}\\
+\midrule
+Live, UART shell, NOR flash & \code{filesystem\_dump} all & Block-exact dump of every partition + manifest\\
+Live, UART shell, NAND/UBI/overlay & \code{rootfs\_archive} (serial) & A block \texttt{dd} of a NAND mtdblock is meaningless; tar the mounted FS\\
+Live device with an IP & \code{rootfs\_archive} (netcat) & DUT pushes tar over TCP; $100\times$ faster than UART base64\\
+Storage attached to the PC (USB/SD) & \code{host\_block\_acquire} & Read-only image at USB speed; refuses the host's own disks\\
+Android-based device & \code{adb\_acquire} & Binary-safe tar over adb exec-out\\
+Bare SPI-NOR chip & \code{spi\_identify} $\rightarrow$ \code{spi\_dump} & flashrom reads the chip directly (invasive, gated)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warnbox}
+\textbf{What acquisition is --- and is not.} None of these bypass a locked
+bootloader, secure boot or an unknown login; they acquire what an existing shell
+or an exposed storage interface already gives. \code{host\_block\_acquire} is
+strictly read-only, never mounts the target, and refuses the host's own system
+disks. Chip-off NAND and JTAG remain out of scope (no software path). Base64 over
+115200 baud carries $\sim$8.4\,KiB/s, so a 16\,MiB partition takes $\sim$33\,min;
+the netcat transport is far faster when the device has an IP.
+\end{warnbox}
+
+% ===========================================================================
+\section{Firmware static analysis}
+Whether an image arrives from a UART/SPI dump, a host-block image or a vendor
+download, the firmware domain runs one pipeline:
+\begin{codebox}\small\ttfamily signatures $\rightarrow$ entropy $\rightarrow$ strings $\rightarrow$ secrets $\rightarrow$ SBOM $\rightarrow$ CVE map $\rightarrow$ secure-boot audit\end{codebox}
+\begin{itemize}
+  \item \code{analyse} --- end-to-end carve, entropy, secrets, components, defaults, CVEs.
+  \item \code{extract} --- binwalk or built-in bounded gzip/CPIO/tar/ZIP carving $\rightarrow$ ZIP.
+  \item \code{entropy} --- per-block Shannon entropy to spot encryption/compression.
+  \item \code{secrets} --- keys, cloud credentials, password assignments, shadow hashes (masked).
+  \item \code{sbom} --- component inventory (BusyBox, OpenSSL, dropbear\dots) + CVE mapping.
+  \item \code{boot\_chain} --- static secure-boot evidence (signed FIT/AVB/dm-verity, fuses, debug locks).
+\end{itemize}
+\begin{callout}
+\textbf{Honesty rule.} A component version string is a CVE \emph{candidate}, not
+proof of exploitability; \code{boot\_chain} reports gaps as \emph{not evidenced}.
+Signature detection is not unpacking --- UBI/UBIFS, encrypted updates and
+proprietary containers need their own tooling.
+\end{callout}
+
+% ===========================================================================
+\section{Vulnerability intelligence}
+CVE mapping draws on three public sources with an offline SQLite FTS5 cache, so
+the platform works air-gapped once the cache is warmed.
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{3.2cm} L{4.6cm} X@{}}
+\toprule
+\textbf{Source} & \textbf{Role} & \textbf{Notes}\\
+\midrule
+NVD 2.0 API & Canonical CVE records, CVSS, CPE & Rate-limited 5/30\,s (50 with a key)\\
+OSV.dev & Ecosystem advisories / patch info & Open API\\
+EPSS (first.org) & Exploit-prediction probability + percentile & Free\\
+Built-in cache & SQLite FTS5 offline store + risk scoring & \code{C3I\_CVE\_ONLINE=false} to go offline\\
+\bottomrule
+\end{tabularx}
+\end{table}
+Per-finding severity is normalised from CVSS (critical $\ge$9.0, high $\ge$7.0,
+medium $\ge$4.0). Engagement risk is a diminishing-returns roll-up capped at 100.
+
+% ===========================================================================
+\section{Reporting \& evidence}
+Every job persists structured findings (title, category, severity, CVSS/EPSS,
+CVE/CWE ids, remediation, evidence) and hashed artefacts. An engagement rolls
+these into a downloadable report. CVE matches are labelled \emph{candidate}, and
+findings carry the basis of each conclusion so a reviewer can audit them.
+
+% ===========================================================================
+\section{Operating system: Kali vs Attify OS vs Debian / Pi OS}
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{3cm} X L{3.4cm}@{}}
+\toprule
+\textbf{Option} & \textbf{Fit} & \textbf{Verdict}\\
+\midrule
+Raspberry Pi OS (64-bit) & Native GPIO/SPI/I2C/UART on the Pi rig; stable & \textbf{Best for the hardware rig}\\
+Kali Linux & Rich wireless/BLE tooling preinstalled; good on a laptop & Best for the radio/network workstation\\
+Attify OS & IoT-focused bundle; now dated and unmaintained & Optional; cherry-pick tools instead\\
+Debian/Ubuntu & Clean base; install only what you need & Fine for the backend server\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\textbf{Recommendation:} Pi OS on the bench controller for the hardware domain,
+and Kali (or Debian + the listed tools) on the laptop that runs the radio and
+network modules. The capability probe tells you exactly which tools are missing
+and gives the \texttt{apt}/\texttt{pip} command to install each.
+
+% ===========================================================================
+\section{Do you need a Raspberry Pi?}
+\textbf{No, not for everything.} Firmware analysis, Wi-Fi/IP, Bluetooth, and
+USB-based UART/SPI all run on a laptop. A Raspberry Pi 5 is recommended when you
+want \emph{bench automation}: GPIO-driven power control, relay/optocoupler
+switching, glitch injection, and native SPI/I2C headers. Wire the device
+\textbf{powered off}, power it through the relay/optocoupler (never the Pi
+header), and keep a common ground. Full pin map and bill of materials are in
+\texttt{docs/HARDWARE\_SETUP.md}.
+
+% ===========================================================================
+\section{Running the tool}
+\begin{enumerate}
+  \item Start the backend (add \code{C3I\_ENABLE\_INVASIVE=true} to allow
+  non-passive modules), then the console, then open \url{http://localhost:5173}:
+  \begin{codebox}\small\ttfamily
+  cd backend \&\& ../.venv/bin/uvicorn app.main:app --port 8080\\
+  cd web \&\& npm run dev
+  \end{codebox}
+  \item Sign in, create an engagement, sign its RoE (set the scope), then run
+  modules from the runner or the domain pages.
+\end{enumerate}
+On a laptop the hardware rig operations report the mock backend and say so; the
+software still runs end to end.
+
+% ===========================================================================
+\section{Testing \& labs}
+\label{sec:testing}
+Everything is testable offline:
+\begin{itemize}
+  \item \textbf{IP-service simulator} --- a loopback target exercises
+  \code{discovery}, \code{portscan}, \code{tls\_audit}, \code{default\_credentials},
+  \code{mqtt\_audit} with no radio.
+  \item \textbf{No-RF Wi-Fi lab} --- \code{mac80211\_hwsim} + hostapd stand up a
+  virtual AP + client so \code{wireless\_survey}, capture and \code{deauth\_test}
+  run deterministically (\texttt{docs/WIFI\_HWSIM\_LAB.md}).
+  \item \textbf{Emulated camera console} --- the test suite's \texttt{FakeCamDevice}
+  speaks busybox over a fake serial line to exercise the UART$\rightarrow$filesystem
+  path (login, \texttt{/proc/mtd}, \texttt{dd|base64}, \texttt{tar}).
+  \item \textbf{Acquisition tests} --- multi-partition dump-all, live-rootfs tar,
+  a real loopback socket for netcat exfil, a monkeypatched \texttt{dd} for
+  host-block imaging (incl. system-disk refusal), and a stubbed adb.
+\end{itemize}
+Run the suite with \code{cd backend \&\& ../.venv/bin/pytest -q}.
+
+% ===========================================================================
+\section{Simulations: router, Bluetooth and Wi-Fi without hardware}
+Because real RF and real boards are not always available, the platform supports
+deterministic, no-hardware stand-ins so workflows can be built, demonstrated and
+regression-tested safely.
+\begin{itemize}
+  \item \textbf{Router / IP device} --- the loopback \emph{IP-service simulator}
+  presents HTTP, TLS and MQTT endpoints so \code{discovery}, \code{portscan},
+  \code{tls\_audit}, \code{default\_credentials} and \code{mqtt\_audit} produce
+  real findings against a controlled target.
+  \item \textbf{Wi-Fi} --- \code{mac80211\_hwsim} creates virtual 802.11 radios
+  driven by hostapd and wpa\_supplicant. A virtual AP (deliberately weak posture:
+  PMF off) and an associated client let \code{wireless\_survey}, monitor-mode
+  capture and \code{deauth\_test} run against a station that actually
+  de-authenticates and re-associates --- with no transmitter and no spectrum use.
+  \item \textbf{Bluetooth} --- the \code{FakeCamDevice} serial console and
+  canned BlueZ/D-Bus maps exercise the console-to-filesystem path and the GATT
+  classifier offline; a real BlueZ adapter is used when present.
+\end{itemize}
+These simulations are the same targets the automated test suite uses, so a
+demonstration and a regression run share one source of truth.
+
+% ===========================================================================
+\section{Verifying results against real test vectors}
+\begin{itemize}
+  \item \textbf{Firmware carving} --- run \code{analyse}/\code{extract} on a known
+  OpenWrt/vendor image and confirm the carved SquashFS/partition offsets match
+  \texttt{binwalk} run independently.
+  \item \textbf{Acquisition integrity} --- compare the module's SHA-256 against an
+  independent \texttt{sha256sum} of the same source.
+  \item \textbf{CVE mapping} --- confirm a component/version maps to the expected
+  CVE ids in NVD, and that EPSS/CVSS values match the public record.
+  \item \textbf{GATT access} --- cross-check OPEN/PROTECTED classification against
+  the device's advertised characteristic flags in nRF Connect.
+\end{itemize}
+
+% ===========================================================================
+\section{Limitations}
+\begin{itemize}
+  \item Does not bypass locked bootloaders, secure boot or unknown credentials.
+  \item RSSI distance is a model estimate, not a measurement.
+  \item CVE matches are candidates from version strings, not proof of exploitability.
+  \item Chip-off NAND, JTAG/SWD and RF jamming are out of scope by design.
+  \item Radio modules need a supported adapter; D-Bus BLE needs \texttt{python3-dbus}.
+\end{itemize}
+
+% ===========================================================================
+\section{Learning resources}
+For fundamentals, the IoT firmware-security canon: OWASP Firmware Security Testing
+Methodology (FSTM), OWASP IoT Top 10, HackTricks (hardware/firmware), the Tarlogic
+FSTM write-ups, and practitioner UART/SPI/\texttt{tar}/\texttt{nc} extraction
+guides. For BLE: the LE Secure Connections vs legacy-pairing literature, and the
+KNOB/BIAS/SweynTooth advisories. These informed the methodology implemented here.
+
+% ===========================================================================
+\section{Appendix --- command cheat-sheet}
+\begin{table}[h]
+\centering\footnotesize\intabletrue
+\begin{tabularx}{\textwidth}{@{}L{6.5cm} X@{}}
+\toprule
+\textbf{Command} & \textbf{Purpose}\\
+\midrule
+\texttt{make api} / \texttt{make web} & Run backend / console (dev)\\
+\texttt{pytest -q} & Run the backend test suite\\
+\texttt{modprobe mac80211\_hwsim radios=3} & Stand up the no-RF Wi-Fi lab\\
+\texttt{dd if=/dev/mtd0 | base64} & UART partition acquisition (per partition)\\
+\texttt{tar cf - / | gzip | nc <host> 4444} & rootfs\_archive netcat transport\\
+\texttt{flashrom -p linux\_spi:dev=/dev/spidev0.0} & SPI flash read-out\\
+\texttt{C3I\_CVE\_ONLINE=false} & Use the offline CVE cache only\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\vfill
+\begin{center}\footnotesize\color{slate}
+End of report · C3i Hub IoT Security Testbed · generated from LaTeX source
+\end{center}
+
+\end{document}

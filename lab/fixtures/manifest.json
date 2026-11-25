@@ -1,0 +1,57 @@
+{
+  "kind": "synthetic calibration corpus; not bootable",
+  "files": {
+    "c3i-camera-lab.bin": {
+      "bytes": 4194304,
+      "sha256": "aa970d6671b60fff768f2d4c4fc832c4b17c271b6195c3cbb2f763bffcc0d796"
+    },
+    "clean-control.bin": {
+      "bytes": 65604,
+      "sha256": "1dd706430f36233100ba948dbee1375c69d24b55a23f4d1262de020338b59f40"
+    },
+    "truncated-stream.bin": {
+      "bytes": 602,
+      "sha256": "aa7d4cba745ff3ec6a4d99cdee2ca5d5eb0e19b524cb69a97083f810512ad1d9"
+    },
+    "camera-rootfs.cpio.gz": {
+      "bytes": 610,
+      "sha256": "509215c8bc0fb69d02dcbb70f9d745e039d7c7e5245ec78f0e68b9d48fd40d52"
+    },
+    "camera-rootfs.tar": {
+      "bytes": 10240,
+      "sha256": "9927a5cbc2b009c2d507bd8b85eea106c31ad0a6d1a418050c6cbbd62b602e07"
+    }
+  },
+  "expected_components": [
+    "busybox",
+    "openssl",
+    "dropbear",
+    "dnsmasq",
+    "u-boot"
+  ],
+  "expected_secret_rules": [
+    "generic-password",
+    "api-key",
+    "shadow-hash"
+  ],
+  "layout": {
+    "uimage": 0,
+    "gzip": 64,
+    "cpio": 4096,
+    "tar": 262144,
+    "high_entropy_region": 1048576
+  },
+  "rootfs_files": {
+    "etc/os-release": "56afeedcb5a7f549ab5b3b00cfa4c371ffac035d8c0db2559549e5eaf5890f41",
+    "etc/camera.conf": "ae9ac1d1d5698ebcc14a7e097d4cf51bb6fd8311fd82cbb7aac5efe9824271ca",
+    "etc/versions": "ab07ca48949e8f31a5ced4cb9c0ffe2c2062a97261c1ddfd1c9cca18b2defb14",
+    "etc/passwd": "0fa4b2d385940681ae3ad4855c03bfbca4068488d028900713633229c7f86526",
+    "etc/shadow": "81258824c564307cf7b564ebdee4f38c1972544a02494f8f740cf0a81d567a21",
+    "www/index.html": "3db1242eafe3e483e134acea0fe79a9030a3684cf39b69c6917b74409d2199c5",
+    "usr/share/lab/README.txt": "e25e83ba6bdc688586d433dbf684c1ed0fa3e247c2e44fe14b4c440adf772903"
+  },
+  "controls": {
+    "clean-control.bin": "No intentional secret/component hits",
+    "truncated-stream.bin": "Signature candidate, extraction must report incomplete/invalid stream"
+  }
+}

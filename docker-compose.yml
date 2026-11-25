@@ -1,0 +1,42 @@
+# C3i Hub IoT Security Testbed - container stack.
+# For Bluetooth/Wi-Fi radio modules you generally need host networking, which
+# is provided by the `radio` profile below (Linux only). Physical GPIO/SPI/UART
+# modules must run natively on the Pi.
+services:
+  c3i:
+    build: .
+    image: c3i-iot-testbed:2.0.0
+    container_name: c3i-iot
+    env_file:
+      - .env
+    environment:
+      C3I_HOST: 0.0.0.0
+      C3I_PORT: 8080
+      C3I_DATA_DIR: /data
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+  # Optional: full host access for radio + capture modules.
+  c3i-radio:
+    profiles: ["radio"]
+    build: .
+    image: c3i-iot-testbed:2.0.0
+    container_name: c3i-iot-radio
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_RAWIO
+    env_file:
+      - .env
+    environment:
+      C3I_HOST: 0.0.0.0
+      C3I_PORT: 8080
+      C3I_DATA_DIR: /data
+    volumes:
+      - ./data:/data
+      - /dev/bus/usb:/dev/bus/usb
+    restart: unless-stopped

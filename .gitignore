@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# Runtime data (never commit)
+data/
+!data/.gitkeep
+uploads/
+*.db
+*.sqlite3
+*.pcap
+*.pcapng
+*.bin
+*.img
+*.rom
+logs/
+*.log
+
+# Secrets
+.env
+*.pem
+*.key
+secrets/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local tooling
+.claude/

@@ -1,0 +1,25 @@
+[Unit]
+Description=C3i Hub IoT Security Testbed
+After=network-online.target bluetooth.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust User/WorkingDirectory to your install location.
+User=iot
+Group=iot
+WorkingDirectory=/opt/c3i-iot/backend
+EnvironmentFile=/opt/c3i-iot/.env
+# Bluetooth D-Bus access + GPIO/serial privileges.
+SupplementaryGroups=bluetooth gpio dialout plugdev
+ExecStart=/opt/c3i-iot/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
+Restart=on-failure
+RestartSec=3
+# --- hardening ---
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/c3i-iot/data
+
+[Install]
+WantedBy=multi-user.target
